@@ -116,3 +116,4 @@ GitHub Actions automatically runs compile verification, type checks (`tsc --noEm
 - AI spending insights
 
 - Budget forecasting
+- Savings goal recommendations
