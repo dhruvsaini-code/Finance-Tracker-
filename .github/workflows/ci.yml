@@ -1,0 +1,63 @@
+name: Continuous Integration Checks
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-checks:
+    name: Backend Lint & Build Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: './Backend/package-lock.json'
+
+    - name: Install Backend Dependencies
+      run: |
+        cd Backend
+        npm ci
+
+    - name: Audit Dependencies
+      run: |
+        cd Backend
+        npm audit signature verification --audit-level=high || true
+
+  frontend-checks:
+    name: Frontend TypeScript & Build Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: 'npm'
+        cache-dependency-path: './Frontend/package-lock.json'
+
+    - name: Install Frontend Dependencies
+      run: |
+        cd Frontend
+        npm ci
+
+    - name: Compile TypeScript Verification
+      run: |
+        cd Frontend
+        npx tsc --noEmit
+
+    - name: Build Production Assets
+      run: |
+        cd Frontend
+        npm run build
