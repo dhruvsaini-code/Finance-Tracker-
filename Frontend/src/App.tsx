@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
@@ -25,6 +25,51 @@ import { useAuthStore } from './store/authStore';
 
 const queryClient = new QueryClient();
 
+interface ErrorBoundaryProps {
+  children?: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+    errorInfo: null
+  };
+
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error, errorInfo: null };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: "50px", color: "red", background: "#111", minHeight: "100vh", fontFamily: "monospace" }}>
+          <h2>An error occurred in the React application:</h2>
+          <pre style={{ color: "orange", whiteSpace: "pre-wrap", fontSize: "16px" }}>
+            {this.state.error?.toString()}
+          </pre>
+          <pre style={{ color: "lightgray", whiteSpace: "pre-wrap", fontSize: "14px" }}>
+            {this.state.errorInfo?.componentStack}
+          </pre>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export const App: React.FC = () => {
   const initializeAuth = useAuthStore((state) => state.initialize);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -47,111 +92,115 @@ export const App: React.FC = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      
-      {/* Toast popup alerts container */}
-      <Toaster position="top-right" richColors theme="dark" closeButton />
-      
-      {/* Command shortcut palette modal */}
-      <CommandPalette 
-        isOpen={isCommandPaletteOpen} 
-        onClose={() => setIsCommandPaletteOpen(false)} 
-      />
-
-      <Router>
-        <Routes>
-          
-          {/* Public Authentication Pathways */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-
-          {/* Private Core Dashboards (Protected & Wrapped in Layout Frame) */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <Dashboard />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
-          
-          <Route
-            path="/transactions"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <Transactions />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        
+        {/* Toast popup alerts container */}
+        <Toaster position="top-right" richColors theme="dark" closeButton />
+        
+        <Router>
+          {/* Command shortcut palette modal */}
+          <CommandPalette 
+            isOpen={isCommandPaletteOpen} 
+            onClose={() => setIsCommandPaletteOpen(false)} 
           />
 
-          <Route
-            path="/budgets"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <Budgets />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+          <Routes>
+            
+            {/* Public Authentication Pathways */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          <Route
-            path="/savings"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <Savings />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Private Core Dashboards (Protected & Wrapped in Layout Frame) */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <Dashboard />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+            
+            <Route
+              path="/transactions"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <Transactions />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/analytics"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <Analytics />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/budgets"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <Budgets />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/ai-insights"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <AIInsights />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/savings"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <Savings />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          <Route
-            path="/settings"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
-                  <Settings />
-                </DashboardLayout>
-              </ProtectedRoute>
-            }
-          />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <Analytics />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Catch-all fallback navigation to Root */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+            <Route
+              path="/ai-insights"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <AIInsights />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
 
-        </Routes>
-      </Router>
-      
-    </QueryClientProvider>
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}>
+                    <Settings />
+                  </DashboardLayout>
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Catch-all fallback navigation to Root */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+
+          </Routes>
+        </Router>
+        
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 
 export default App;
+
+

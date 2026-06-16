@@ -15,7 +15,7 @@ const budgetSchema = z.object({
     (val) => Number(val),
     z.number().positive('Limit must be a positive number')
   ),
-  month: z.string().min(1, 'Month is required').match(/^\d{4}-\d{2}$/, 'Use YYYY-MM format')
+  month: z.string().min(1, 'Month is required').regex(/^\d{4}-\d{2}$/, 'Use YYYY-MM format')
 });
 
 type BudgetFormFields = z.infer<typeof budgetSchema>;
