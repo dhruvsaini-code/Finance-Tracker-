@@ -110,3 +110,5 @@ docker-compose up --build
 
 ## CI/CD Pipeline
 GitHub Actions automatically runs compile verification, type checks (`tsc --noEmit`), and builds production client assets on push to `main` or `master` branches (configured under `.github/workflows/ci.yml`).
+
+## Upcoming Features
