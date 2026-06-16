@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { transactionService } from '../services/apiService';
-import { Transaction } from '../types';
+import type { Transaction } from '../types';
 import GlassCard from '../components/ui/GlassCard';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
 

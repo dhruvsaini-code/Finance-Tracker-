@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Plus, Trash2, X, Target, Calendar, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { savingsService } from '../services/apiService';
-import { SavingsGoal } from '../types';
+import type { SavingsGoal } from '../types';
 import GlassCard from '../components/ui/GlassCard';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
 

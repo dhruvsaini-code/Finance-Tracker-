@@ -1,5 +1,5 @@
 import apiClient from '../api/apiClient';
-import { User, Transaction, Budget, SavingsGoal, DashboardStats, AIInsights } from '../types';
+import type { User, Transaction, Budget, SavingsGoal, DashboardStats, AIInsights } from '../types';
 
 // Auth API calls
 export const authService = {
