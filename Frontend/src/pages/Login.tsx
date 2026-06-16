@@ -31,7 +31,7 @@ export const Login: React.FC = () => {
     try {
       const response = await authService.login({
         email: data.email,
-        password: data.password.split('') as unknown as char[]
+        password: data.password
       });
       setCredentials(response.user, response.token);
       toast.success(`Welcome back, ${response.user.username}!`);

@@ -37,7 +37,7 @@ export const Register: React.FC = () => {
       const response = await authService.register({
         username: data.username,
         email: data.email,
-        password: data.password.split('') as unknown as char[]
+        password: data.password
       });
       setCredentials(response.user, response.token);
       toast.success(`Account created! Welcome, ${response.user.username}!`);

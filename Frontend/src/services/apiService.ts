@@ -3,11 +3,11 @@ import { User, Transaction, Budget, SavingsGoal, DashboardStats, AIInsights } fr
 
 // Auth API calls
 export const authService = {
-  register: async (data: { username: string; email: string; password: char[] }) => {
+  register: async (data: { username: string; email: string; password: string }) => {
     const res = await apiClient.post<{ success: boolean; token: string; user: User }>('/auth/register', data);
     return res.data;
   },
-  login: async (data: { email: string; password: char[] }) => {
+  login: async (data: { email: string; password: string }) => {
     const res = await apiClient.post<{ success: boolean; token: string; user: User }>('/auth/login', data);
     return res.data;
   },
