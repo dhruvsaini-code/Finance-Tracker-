@@ -8,20 +8,20 @@ const {
   getTransactionStats,
   getAIInsights
 } = require('../controllers/transactionController');
+const { validateTransaction } = require('../validators/transactionValidator');
 const { protect } = require('../middleware/auth');
 
-// Apply protection to all transaction routes
 router.use(protect);
 
 router.route('/')
   .get(getTransactions)
-  .post(createTransaction);
+  .post(validateTransaction, createTransaction);
 
 router.get('/stats', getTransactionStats);
 router.get('/ai-insights', getAIInsights);
 
 router.route('/:id')
-  .put(updateTransaction)
-  .deleteOne(deleteTransaction);
+  .put(validateTransaction, updateTransaction)
+  .delete(deleteTransaction);
 
 module.exports = router;

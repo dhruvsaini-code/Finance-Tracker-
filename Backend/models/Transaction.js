@@ -6,12 +6,6 @@ const TransactionSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  title: {
-    type: String,
-    required: [true, 'Please add a transaction title'],
-    trim: true,
-    maxlength: [100, 'Title cannot be more than 100 characters']
-  },
   amount: {
     type: Number,
     required: [true, 'Please add an amount']
@@ -20,6 +14,12 @@ const TransactionSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please select or add a category'],
     trim: true
+  },
+  description: {
+    type: String,
+    required: [true, 'Please add a description'],
+    trim: true,
+    maxlength: [150, 'Description cannot be more than 150 characters']
   },
   type: {
     type: String,
@@ -30,6 +30,10 @@ const TransactionSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Please add a transaction date'],
     default: Date.now
+  },
+  tags: {
+    type: [String],
+    default: []
   },
   notes: {
     type: String,

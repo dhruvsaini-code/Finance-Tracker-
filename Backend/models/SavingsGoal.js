@@ -20,8 +20,9 @@ const SavingsGoalSchema = new mongoose.Schema({
     type: Number,
     default: 0.0
   },
-  desiredDate: {
-    type: Date
+  deadline: {
+    type: Date,
+    required: [true, 'Please provide a target deadline date']
   },
   createdAt: {
     type: Date,

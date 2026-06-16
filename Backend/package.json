@@ -1,7 +1,7 @@
 {
   "name": "finance-tracker-backend",
   "version": "1.0.0",
-  "description": "Backend API for Finance Tracker System using Node, Express, MongoDB, and JWT",
+  "description": "Production API for AI-powered Finance Tracker System",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
@@ -9,9 +9,12 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^7.2.0",
+    "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.4.1"
   }

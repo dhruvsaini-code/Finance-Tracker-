@@ -1,11 +1,14 @@
-const User = require('../models/User');
-const jwt = require('jsonwebtoken');
+const authService = require('../services/authService');
 
-// Helper to sign JWT
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'super_secret_finance_tracker_key_123456', {
-    expiresIn: '30d'
-  });
+// Helper to set httpOnly cookie for refresh token
+const setRefreshTokenCookie = (res, token) => {
+  const cookieOptions = {
+    httpOnly: true,
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict'
+  };
+  res.cookie('refreshToken', token, cookieOptions);
 };
 
 // @desc    Register a new user
@@ -15,37 +18,16 @@ exports.register = async (req, res, next) => {
   try {
     const { username, email, password } = req.body;
 
-    // Validation
-    if (!username || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide all fields' });
-    }
+    const result = await authService.register(username, email, password);
 
-    // Check if user exists
-    const userExists = await User.findOne({ $or: [{ email }, { username }] });
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
-    }
+    // Set refresh token in cookie
+    setRefreshTokenCookie(res, result.refreshToken);
 
-    // Create user
-    const user = await User.create({
-      username,
-      email,
-      password
+    res.status(201).json({
+      success: true,
+      token: result.accessToken, // access token
+      user: result.user
     });
-
-    if (user) {
-      res.status(201).json({
-        success: true,
-        token: generateToken(user._id),
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email
-        }
-      });
-    } else {
-      res.status(400).json({ success: false, message: 'Invalid user data' });
-    }
   } catch (error) {
     next(error);
   }
@@ -58,43 +40,75 @@ exports.login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // Check for user email and password
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide email and password' });
-    }
+    const result = await authService.login(email, password);
 
-    // Check for user (select password explicitly since we excluded it in User schema)
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
-
-    // Check password match
-    const isMatch = await user.matchPassword(password);
-    if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
+    // Set refresh token in cookie
+    setRefreshTokenCookie(res, result.refreshToken);
 
     res.json({
       success: true,
-      token: generateToken(user._id),
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      }
+      token: result.accessToken, // access token
+      user: result.user
     });
   } catch (error) {
     next(error);
   }
 };
 
-// @desc    Get current logged in user
+// @desc    Refresh access token
+// @route   POST /api/auth/refresh
+// @access  Public
+exports.refresh = async (req, res, next) => {
+  try {
+    // Read from cookies or request body
+    const token = req.cookies?.refreshToken || req.body.refreshToken;
+
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Refresh token is required' });
+    }
+
+    const result = await authService.refresh(token);
+
+    // Set new refresh token in cookie (rotation)
+    setRefreshTokenCookie(res, result.refreshToken);
+
+    res.json({
+      success: true,
+      token: result.accessToken,
+      user: result.user
+    });
+  } catch (error) {
+    res.status(401).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Log user out / Clear session
+// @route   POST /api/auth/logout
+// @access  Private
+exports.logout = async (req, res, next) => {
+  try {
+    // req.user was populated in protect middleware
+    if (req.user) {
+      await authService.logout(req.user._id);
+    }
+
+    // Clear client cookies
+    res.clearCookie('refreshToken');
+
+    res.json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get current logged in user profile
 // @route   GET /api/auth/me
 // @access  Private
 exports.getMe = async (req, res, next) => {
   try {
-    // req.user was populated in protect middleware
     res.json({
       success: true,
       user: req.user

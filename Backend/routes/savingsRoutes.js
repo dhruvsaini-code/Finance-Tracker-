@@ -6,16 +6,17 @@ const {
   updateSavingsGoal,
   deleteSavingsGoal
 } = require('../controllers/savingsController');
+const { validateSavingsGoal } = require('../validators/savingsGoalValidator');
 const { protect } = require('../middleware/auth');
 
 router.use(protect);
 
 router.route('/')
   .get(getSavingsGoals)
-  .post(createSavingsGoal);
+  .post(validateSavingsGoal, createSavingsGoal);
 
 router.route('/:id')
-  .put(updateSavingsGoal)
-  .deleteOne(deleteSavingsGoal);
+  .put(validateSavingsGoal, updateSavingsGoal)
+  .delete(deleteSavingsGoal);
 
 module.exports = router;

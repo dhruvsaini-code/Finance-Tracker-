@@ -1,4 +1,4 @@
-const Budget = require('../models/Budget');
+const budgetService = require('../services/budgetService');
 
 // @desc    Get user budgets for a specific month
 // @route   GET /api/budgets
@@ -6,13 +6,7 @@ const Budget = require('../models/Budget');
 exports.getBudgets = async (req, res, next) => {
   try {
     const { month } = req.query; // YYYY-MM
-    const query = { user: req.user._id };
-    
-    if (month) {
-      query.month = month;
-    }
-
-    const budgets = await Budget.find(query);
+    const budgets = await budgetService.getBudgets(req.user._id, month);
     res.json({
       success: true,
       count: budgets.length,
@@ -28,19 +22,7 @@ exports.getBudgets = async (req, res, next) => {
 // @access  Private
 exports.upsertBudget = async (req, res, next) => {
   try {
-    const { category, limitAmount, month } = req.body;
-
-    if (!category || !limitAmount || !month) {
-      return res.status(400).json({ success: false, message: 'Please provide all fields' });
-    }
-
-    // Try finding existing budget to update, or create a new one
-    const filter = { user: req.user._id, category, month };
-    const update = { limitAmount };
-    const options = { new: true, upsert: true, runValidators: true };
-
-    const budget = await Budget.findOneAndUpdate(filter, update, options);
-
+    const budget = await budgetService.upsertBudget(req.user._id, req.body);
     res.status(201).json({
       success: true,
       data: budget
@@ -55,19 +37,7 @@ exports.upsertBudget = async (req, res, next) => {
 // @access  Private
 exports.deleteBudget = async (req, res, next) => {
   try {
-    const budget = await Budget.findById(req.params.id);
-
-    if (!budget) {
-      return res.status(404).json({ success: false, message: 'Budget not found' });
-    }
-
-    // Verify ownership
-    if (budget.user.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ success: false, message: 'Not authorized' });
-    }
-
-    await budget.deleteOne();
-
+    await budgetService.deleteBudget(req.user._id, req.params.id);
     res.json({
       success: true,
       data: {}
