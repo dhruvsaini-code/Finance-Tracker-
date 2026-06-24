@@ -1,4 +1,5 @@
 const authService = require('../services/authService');
+const { logAudit } = require('../services/auditService');
 
 // Helper to set httpOnly cookie for refresh token
 const setRefreshTokenCookie = (res, token) => {
@@ -23,6 +24,10 @@ exports.register = async (req, res, next) => {
     // Set refresh token in cookie
     setRefreshTokenCookie(res, result.refreshToken);
 
+    // Log security audit
+    req.user = result.user; // temporarily attach to request context
+    await logAudit(req, 'USER_REGISTER', { username: result.user.username, email: result.user.email });
+
     res.status(201).json({
       success: true,
       token: result.accessToken, // access token
@@ -44,6 +49,10 @@ exports.login = async (req, res, next) => {
 
     // Set refresh token in cookie
     setRefreshTokenCookie(res, result.refreshToken);
+
+    // Log security audit
+    req.user = result.user; // temporarily attach to request context
+    await logAudit(req, 'USER_LOGIN', { email: result.user.email });
 
     res.json({
       success: true,
@@ -72,6 +81,10 @@ exports.refresh = async (req, res, next) => {
     // Set new refresh token in cookie (rotation)
     setRefreshTokenCookie(res, result.refreshToken);
 
+    // Log audit
+    req.user = result.user;
+    await logAudit(req, 'TOKEN_REFRESH', { email: result.user.email });
+
     res.json({
       success: true,
       token: result.accessToken,
@@ -89,6 +102,7 @@ exports.logout = async (req, res, next) => {
   try {
     // req.user was populated in protect middleware
     if (req.user) {
+      await logAudit(req, 'USER_LOGOUT', { username: req.user.username, email: req.user.email });
       await authService.logout(req.user._id);
     }
 
