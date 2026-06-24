@@ -1,17 +1,20 @@
+const { z } = require('zod');
+
+const budgetSchema = z.object({
+  category: z.string().trim().min(1, 'Category is required'),
+  limitAmount: z.preprocess(
+    (val) => (val !== undefined ? Number(val) : undefined),
+    z.number().positive('Limit amount must be a positive number')
+  ),
+  month: z.string().trim().regex(/^\d{4}-\d{2}$/, 'Month must be in YYYY-MM format')
+});
+
 exports.validateBudget = (req, res, next) => {
-  const { category, limitAmount, month } = req.body;
-
-  if (!category || category.trim().length === 0) {
-    return res.status(400).json({ success: false, message: 'Category is required' });
+  const result = budgetSchema.safeParse(req.body);
+  if (!result.success) {
+    const errorMsg = result.error.errors.map(e => e.message).join(', ');
+    return res.status(400).json({ success: false, message: errorMsg });
   }
-
-  if (limitAmount === undefined || isNaN(Number(limitAmount)) || Number(limitAmount) <= 0) {
-    return res.status(400).json({ success: false, message: 'Limit amount is required and must be a positive number' });
-  }
-
-  if (!month || !/^\d{4}-\d{2}$/.test(month)) {
-    return res.status(400).json({ success: false, message: 'Month is required and must be in YYYY-MM format' });
-  }
-
+  req.body = result.data;
   next();
 };
