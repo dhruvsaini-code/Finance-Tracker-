@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
+import { useCurrencyStore } from '../store/currencyStore';
 import { toast } from 'sonner';
 import { 
   User, 
@@ -11,16 +12,18 @@ import {
   Moon, 
   ShieldCheck, 
   Eye, 
-  EyeOff 
+  EyeOff,
+  Coins
 } from 'lucide-react';
 import GlassCard from '../components/ui/GlassCard';
 
 export const Settings: React.FC = () => {
   const { user } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
+  const { currency, setCurrency } = useCurrencyStore();
   
   // Navigation tabs state
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'theme'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'notifications' | 'theme' | 'currency'>('profile');
 
   // Form states
   const [showPassword, setShowPassword] = useState(false);
@@ -48,7 +51,6 @@ export const Settings: React.FC = () => {
       return;
     }
     
-    // Simulate successful password update
     toast.success('Security password updated successfully!');
     setOldPassword('');
     setNewPassword('');
@@ -68,7 +70,7 @@ export const Settings: React.FC = () => {
           Settings
         </h1>
         <p className="text-xs text-slate-400 mt-1">
-          Adjust profile details, passwords, notifications channels, and theme preferences.
+          Adjust profile details, passwords, notifications channels, currency, and theme preferences.
         </p>
       </div>
 
@@ -79,7 +81,7 @@ export const Settings: React.FC = () => {
         <div className="lg:col-span-1 space-y-1">
           <button
             onClick={() => setActiveTab('profile')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'profile'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
@@ -90,7 +92,7 @@ export const Settings: React.FC = () => {
           
           <button
             onClick={() => setActiveTab('security')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'security'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
@@ -101,7 +103,7 @@ export const Settings: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('notifications')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'notifications'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
@@ -112,13 +114,24 @@ export const Settings: React.FC = () => {
 
           <button
             onClick={() => setActiveTab('theme')}
-            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'theme'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
             }`}
           >
             Theme Preference
+          </button>
+
+          <button
+            onClick={() => setActiveTab('currency')}
+            className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'currency'
+                ? 'bg-indigo-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
+            }`}
+          >
+            Currency Preference
           </button>
         </div>
 
@@ -347,6 +360,38 @@ export const Settings: React.FC = () => {
                 >
                   Switch Theme (Current: {theme})
                 </button>
+              </div>
+            </GlassCard>
+          )}
+
+          {/* TAB 5: CURRENCY */}
+          {activeTab === 'currency' && (
+            <GlassCard className="space-y-6">
+              <div>
+                <h3 className="text-sm font-bold flex items-center gap-1.5">
+                  <Coins size={16} className="text-indigo-500" />
+                  <span>Currency Preference</span>
+                </h3>
+                <p className="text-[10px] text-slate-400 mt-0.5">Choose your primary currency formatting. This updates all transaction lists, stats, and reports dynamically.</p>
+              </div>
+
+              <div className="space-y-4 max-w-sm">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-400 mb-2">Primary Base Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => {
+                      setCurrency(e.target.value as any);
+                      toast.success(`Preferred currency switched to ${e.target.value}!`);
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                  >
+                    <option value="USD">USD ($) - US Dollar</option>
+                    <option value="EUR">EUR (€) - Euro</option>
+                    <option value="GBP">GBP (£) - British Pound</option>
+                    <option value="INR">INR (₹) - Indian Rupee</option>
+                  </select>
+                </div>
               </div>
             </GlassCard>
           )}
