@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useCurrencyStore } from '../../store/currencyStore';
 
 interface AnimatedCounterProps {
   value: number;
@@ -9,9 +10,15 @@ interface AnimatedCounterProps {
 export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({ 
   value, 
   duration = 1000,
-  formatter = (val) => `$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  formatter
 }) => {
+  const { currencySymbol } = useCurrencyStore();
   const [count, setCount] = useState(0);
+
+  const defaultFormatter = (val: number) => 
+    `${currencySymbol}${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  
+  const activeFormatter = formatter || defaultFormatter;
 
   useEffect(() => {
     let startTimestamp: number | null = null;
@@ -42,7 +49,7 @@ export const AnimatedCounter: React.FC<AnimatedCounterProps> = ({
   }, [value, duration]);
 
   // If initial load or zero, show the actual formatted value
-  return <span>{formatter(count)}</span>;
+  return <span>{activeFormatter(count)}</span>;
 };
 
 export default AnimatedCounter;
