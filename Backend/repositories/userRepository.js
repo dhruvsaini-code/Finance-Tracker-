@@ -32,6 +32,11 @@ class UserRepository {
   async findByRefreshToken(refreshToken) {
     return await User.findOne({ refreshToken }).select('+refreshToken');
   }
+
+  async findByIdWithRefreshToken(id) {
+    return await User.findById(id).select('+refreshToken');
+  }
 }
 
 module.exports = new UserRepository();
+

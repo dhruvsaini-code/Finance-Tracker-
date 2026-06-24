@@ -94,35 +94,43 @@ class AuthService {
   }
 
   async refresh(token) {
+    let decoded;
     try {
-      // Decode and verify refresh token
-      const decoded = jwt.verify(token, JWT_REFRESH_SECRET);
-      
-      const user = await userRepository.findByRefreshToken(token);
-      if (!user) {
-        throw new Error('Invalid refresh token');
-      }
-
-      // Generate new tokens
-      const newAccessToken = this.generateAccessToken(user);
-      const newRefreshToken = this.generateRefreshToken(user);
-
-      // Rotate refresh token
-      await userRepository.updateRefreshToken(user._id, newRefreshToken);
-
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        user: {
-          id: user._id,
-          username: user.username,
-          email: user.email,
-          role: user.role
-        }
-      };
-    } catch (error) {
-      throw new Error('Token verification failed: ' + error.message);
+      decoded = jwt.verify(token, JWT_REFRESH_SECRET);
+    } catch (err) {
+      throw new Error('Token verification failed: ' + err.message);
     }
+
+    // Fetch user and include their active refresh token
+    const user = await userRepository.findByIdWithRefreshToken(decoded.id);
+    if (!user) {
+      throw new Error('Invalid refresh token: user not found');
+    }
+
+    // Reuse detection
+    if (user.refreshToken !== token) {
+      // Token is valid but doesn't match active DB token -> Compromised. Invalidate session.
+      await userRepository.updateRefreshToken(user._id, null);
+      throw new Error('Refresh token reuse detected! Security breach alert. User logged out.');
+    }
+
+    // Generate new tokens
+    const newAccessToken = this.generateAccessToken(user);
+    const newRefreshToken = this.generateRefreshToken(user);
+
+    // Rotate refresh token in database
+    await userRepository.updateRefreshToken(user._id, newRefreshToken);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        role: user.role
+      }
+    };
   }
 }
 
