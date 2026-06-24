@@ -18,5 +18,9 @@ COPY . .
 # Expose port
 EXPOSE 5000
 
+# Health check probe
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD node -e "const http = require('http'); http.get('http://localhost:' + (process.env.PORT || 5000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); }).on('error', () => { process.exit(1); });"
+
 # Start server
 CMD ["node", "app.js"]

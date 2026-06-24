@@ -1,20 +1,6 @@
 version: '3.8'
 
 services:
-  backend:
-    build:
-      context: ./Backend
-      dockerfile: Dockerfile
-    ports:
-      - "5000:5000"
-    environment:
-      - PORT=5000
-      - MONGO_URI=mongodb://mongodb:27017/finance_tracker
-      - JWT_SECRET=super_secret_finance_tracker_key_123456
-      - NODE_ENV=production
-    depends_on:
-      - mongodb
-
   frontend:
     build:
       context: ./Frontend
@@ -22,14 +8,48 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    networks:
+      - public_net
+    restart: always
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongodb:27017/finance_tracker
+      - JWT_SECRET=super_secret_finance_tracker_key_123456
+      - JWT_REFRESH_SECRET=super_secret_refresh_key_987654
+      - NODE_ENV=production
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - public_net
+      - private_net
+    restart: always
 
   mongodb:
-    image: mongo:6.0
-    ports:
-      - "27017:27017"
+    image: mongo:6.0-jammy
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - private_net
+    restart: always
+
+networks:
+  public_net:
+    driver: bridge
+  private_net:
+    driver: bridge
 
 volumes:
   mongo_data:
