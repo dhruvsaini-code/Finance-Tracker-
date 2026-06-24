@@ -9,6 +9,7 @@ import { savingsService } from '../services/apiService';
 import type { SavingsGoal } from '../types';
 import GlassCard from '../components/ui/GlassCard';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
+import { useCurrencyStore } from '../store/currencyStore';
 
 const savingsSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100),
@@ -26,6 +27,7 @@ const savingsSchema = z.object({
 type SavingsFormFields = z.infer<typeof savingsSchema>;
 
 export const Savings: React.FC = () => {
+  const { currencySymbol } = useCurrencyStore();
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isProgressModalOpen, setIsProgressModalOpen] = useState(false);
@@ -78,7 +80,7 @@ export const Savings: React.FC = () => {
   });
 
   // Forms
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<SavingsFormFields>({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<SavingsFormFields>({
     resolver: zodResolver(savingsSchema),
     defaultValues: {
       currentAmount: 0,
@@ -218,11 +220,11 @@ export const Savings: React.FC = () => {
                   <div className="flex justify-between items-end text-xs">
                     <div className="text-left">
                       <span className="text-[9px] text-slate-400 block">Current</span>
-                      <span className="font-bold">${g.currentAmount.toLocaleString()}</span>
+                      <span className="font-bold">{currencySymbol}{g.currentAmount.toLocaleString()}</span>
                     </div>
                     <div className="text-right">
                       <span className="text-[9px] text-slate-400 block">Target</span>
-                      <span className="font-semibold text-slate-500">${g.targetAmount.toLocaleString()}</span>
+                      <span className="font-semibold text-slate-500">{currencySymbol}{g.targetAmount.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -267,14 +269,36 @@ export const Savings: React.FC = () => {
 
             <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-4">
               
+              {/* Goal Template Dropdown */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Goal Templates (Optional)</label>
+                <select
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) return;
+                    const [titleText, amountText] = val.split('|');
+                    setValue('title', titleText);
+                    setValue('targetAmount', Number(amountText));
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors cursor-pointer text-slate-700 dark:text-slate-200"
+                >
+                  <option value="">Select a template...</option>
+                  <option value="3-Month Emergency Fund|10000">3-Month Emergency Fund ({currencySymbol}10,000)</option>
+                  <option value="Annual Roth IRA Max Out|7000">Annual Roth IRA Max Out ({currencySymbol}7,000)</option>
+                  <option value="Vacation Getaway Fund|3000">Vacation Getaway Fund ({currencySymbol}3,000)</option>
+                  <option value="Car Service & Repairs|1500">Car Service & Repairs ({currencySymbol}1,500)</option>
+                  <option value="Home Down Payment Fund|50000">Home Down Payment Fund ({currencySymbol}50,000)</option>
+                </select>
+              </div>
+
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Goal Name</label>
+                <label className="block text-xs font-semibold text-slate-450 mb-1">Goal Name</label>
                 <input
                   type="text"
                   placeholder="Emergency fund, Travel trip..."
                   {...register('title')}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors text-slate-700 dark:text-slate-200"
                 />
                 {errors.title && <p className="text-red-500 text-[10px] mt-0.5">{errors.title.message}</p>}
               </div>
@@ -282,7 +306,7 @@ export const Savings: React.FC = () => {
               {/* Target & Current */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Target Amount ($)</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Target Amount ({currencySymbol})</label>
                   <input
                     type="number"
                     placeholder="10000"
@@ -292,7 +316,7 @@ export const Savings: React.FC = () => {
                   {errors.targetAmount && <p className="text-red-500 text-[10px] mt-0.5">{errors.targetAmount.message}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1">Initial Saved ($)</label>
+                  <label className="block text-xs font-semibold text-slate-400 mb-1">Initial Saved ({currencySymbol})</label>
                   <input
                     type="number"
                     placeholder="500"
@@ -340,10 +364,10 @@ export const Savings: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Amount to Save ($)</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Amount to Save ({currencySymbol})</label>
                 <div className="relative">
                   <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs">
-                    $
+                    {currencySymbol}
                   </span>
                   <input
                     type="number"

@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { budgetService, transactionService } from '../services/apiService';
 import GlassCard from '../components/ui/GlassCard';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
+import { useCurrencyStore } from '../store/currencyStore';
 
 const budgetSchema = z.object({
   category: z.string().min(1, 'Category is required'),
@@ -26,10 +27,18 @@ const CATEGORIES = [
 ];
 
 export const Budgets: React.FC = () => {
+  const { currencySymbol } = useCurrencyStore();
   const queryClient = useQueryClient();
   const currentMonthStr = new Date().toISOString().substring(0, 7); // YYYY-MM
   const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Template States
+  const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('50-30-20');
+  const [templateIncome, setTemplateIncome] = useState('4000');
+  const [selectedTemplateMonth, setSelectedTemplateMonth] = useState(currentMonthStr);
+  const [isApplyingTemplate, setIsApplyingTemplate] = useState(false);
 
   // Queries
   const { data: budgets = [], isLoading: isBudgetsLoading } = useQuery({
@@ -89,6 +98,63 @@ export const Budgets: React.FC = () => {
   const totalSpent = budgets.reduce((acc, b) => acc + (activeSpendBreakdown[b.category] || 0), 0);
   const remainingTotal = totalLimit - totalSpent;
 
+  const applyTemplate = async () => {
+    setIsApplyingTemplate(true);
+    try {
+      const allocations: Record<string, number> = {};
+      const income = Number(templateIncome) || 4000;
+      
+      if (selectedTemplate === '50-30-20') {
+        allocations['Housing'] = Math.round(income * 0.25);
+        allocations['Utilities'] = Math.round(income * 0.08);
+        allocations['Groceries'] = Math.round(income * 0.12);
+        allocations['Transport'] = Math.round(income * 0.05);
+        allocations['Dining Out'] = Math.round(income * 0.10);
+        allocations['Entertainment'] = Math.round(income * 0.08);
+        allocations['Shopping'] = Math.round(income * 0.07);
+        allocations['Other'] = Math.round(income * 0.05);
+      } else if (selectedTemplate === '70-20-10') {
+        allocations['Housing'] = Math.round(income * 0.35);
+        allocations['Utilities'] = Math.round(income * 0.10);
+        allocations['Groceries'] = Math.round(income * 0.15);
+        allocations['Transport'] = Math.round(income * 0.05);
+        allocations['Healthcare'] = Math.round(income * 0.05);
+        allocations['Dining Out'] = Math.round(income * 0.05);
+        allocations['Entertainment'] = Math.round(income * 0.03);
+        allocations['Shopping'] = Math.round(income * 0.02);
+      } else { // balanced
+        allocations['Housing'] = Math.round(income * 0.12);
+        allocations['Utilities'] = Math.round(income * 0.08);
+        allocations['Groceries'] = Math.round(income * 0.10);
+        allocations['Dining Out'] = Math.round(income * 0.08);
+        allocations['Transport'] = Math.round(income * 0.08);
+        allocations['Entertainment'] = Math.round(income * 0.08);
+        allocations['Shopping'] = Math.round(income * 0.08);
+        allocations['Healthcare'] = Math.round(income * 0.08);
+        allocations['Other'] = Math.round(income * 0.10);
+      }
+      
+      const promises = Object.entries(allocations).map(([category, amount]) => {
+        return budgetService.upsert({
+          category,
+          limitAmount: amount,
+          month: selectedTemplateMonth
+        });
+      });
+      
+      await Promise.all(promises);
+      
+      toast.success('Budget template applied successfully!');
+      queryClient.invalidateQueries({ queryKey: ['budgets', selectedMonth] });
+      queryClient.invalidateQueries({ queryKey: ['ai-insights'] });
+      setIsTemplateModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Error applying budget template');
+    } finally {
+      setIsApplyingTemplate(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       
@@ -112,6 +178,12 @@ export const Budgets: React.FC = () => {
             className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/60 text-xs font-semibold outline-none w-1/2 sm:w-auto cursor-pointer"
           />
           <button
+            onClick={() => setIsTemplateModalOpen(true)}
+            className="flex items-center justify-center space-x-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-250 rounded-xl text-xs font-semibold shadow-sm hover:shadow-md transition-all w-1/2 sm:w-auto cursor-pointer border border-slate-200 dark:border-slate-850"
+          >
+            <span>Apply Template</span>
+          </button>
+          <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center justify-center space-x-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-500/20 hover:shadow-lg transition-all w-1/2 sm:w-auto cursor-pointer"
           >
@@ -126,21 +198,21 @@ export const Budgets: React.FC = () => {
         <GlassCard glow className="text-left">
           <span className="text-xs font-semibold text-slate-400">Total Budget Limit</span>
           <h3 className="text-2xl font-extrabold mt-1 text-slate-700 dark:text-slate-100">
-            ${totalLimit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {currencySymbol}{totalLimit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h3>
         </GlassCard>
         
         <GlassCard glow className="text-left">
           <span className="text-xs font-semibold text-slate-400">Total Budget Spent</span>
           <h3 className="text-2xl font-extrabold mt-1 text-rose-500">
-            ${totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {currencySymbol}{totalSpent.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h3>
         </GlassCard>
 
         <GlassCard glow className="text-left">
           <span className="text-xs font-semibold text-slate-400">Remaining Cushion</span>
           <h3 className={`text-2xl font-extrabold mt-1 ${remainingTotal >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-            ${remainingTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {currencySymbol}{remainingTotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </h3>
         </GlassCard>
       </div>
@@ -165,25 +237,24 @@ export const Budgets: React.FC = () => {
                 const isOver = spent > b.limitAmount;
                 const isWarning = !isOver && percent >= 80;
                 
+                const r = 14;
+                const stroke = 3;
+                const circ = 2 * Math.PI * r;
+                const offset = circ - (Math.min(percent, 100) / 100) * circ;
+
                 return (
                   <div key={b._id} className="py-4 first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     
-                    {/* Metadata & Status Icons */}
+                    {/* Metadata & Status Progress Ring */}
                     <div className="flex items-center space-x-3 text-left md:w-1/4">
-                      <div className={`p-2.5 rounded-xl ${
-                        isOver 
-                          ? 'bg-rose-500/10 text-rose-500' 
-                          : isWarning 
-                            ? 'bg-amber-500/10 text-amber-500' 
-                            : 'bg-indigo-500/10 text-indigo-500'
-                      }`}>
-                        {isOver ? (
-                          <AlertCircle size={18} />
-                        ) : isWarning ? (
-                          <AlertTriangle size={18} />
-                        ) : (
-                          <TrendingDown size={18} />
-                        )}
+                      <div className="relative w-10 h-10 flex items-center justify-center shrink-0">
+                        <svg className="w-10 h-10 transform -rotate-90">
+                          <circle cx="20" cy="20" r={r} className="stroke-slate-100 dark:stroke-slate-800" strokeWidth={stroke} fill="transparent" />
+                          <circle cx="20" cy="20" r={r} className={`transition-all duration-500 ${isOver ? 'stroke-rose-500' : isWarning ? 'stroke-amber-500' : 'stroke-indigo-500'}`} strokeWidth={stroke} strokeDasharray={circ} strokeDashoffset={offset} strokeLinecap="round" fill="transparent" />
+                        </svg>
+                        <div className="absolute text-[8px] font-bold">
+                          {percent.toFixed(0)}%
+                        </div>
                       </div>
                       <div>
                         <h4 className="font-semibold text-xs capitalize">{b.category}</h4>
@@ -196,7 +267,7 @@ export const Budgets: React.FC = () => {
                       <div className="flex justify-between text-[10px] font-medium text-slate-400">
                         <span>{percent.toFixed(0)}% Utilized</span>
                         <span>
-                          ${spent.toLocaleString(undefined, { maximumFractionDigits: 0 })} spent / ${b.limitAmount.toLocaleString()} limit
+                          {currencySymbol}{spent.toLocaleString(undefined, { maximumFractionDigits: 0 })} spent / {currencySymbol}{b.limitAmount.toLocaleString()} limit
                         </span>
                       </div>
                       <div className="h-2 w-full bg-slate-100 dark:bg-slate-800/50 rounded-full overflow-hidden">
@@ -219,8 +290,8 @@ export const Budgets: React.FC = () => {
                         <p className="text-[10px] text-slate-400">Status</p>
                         <p className={`text-xs font-bold ${isOver ? 'text-rose-500' : 'text-emerald-500'}`}>
                           {isOver 
-                            ? `Over by $${(spent - b.limitAmount).toLocaleString(undefined, { maximumFractionDigits: 0 })}` 
-                            : `$${(b.limitAmount - spent).toLocaleString(undefined, { maximumFractionDigits: 0 })} left`
+                            ? `Over by ${currencySymbol}${(spent - b.limitAmount).toLocaleString(undefined, { maximumFractionDigits: 0 })}` 
+                            : `${currencySymbol}${(b.limitAmount - spent).toLocaleString(undefined, { maximumFractionDigits: 0 })} left`
                           }
                         </p>
                       </div>
@@ -276,7 +347,7 @@ export const Budgets: React.FC = () => {
 
               {/* Limit amount */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-1">Limit Amount ($)</label>
+                <label className="block text-xs font-semibold text-slate-400 mb-1">Limit Amount ({currencySymbol})</label>
                 <input
                   type="number"
                   placeholder="500"
@@ -306,6 +377,87 @@ export const Budgets: React.FC = () => {
               </button>
 
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Apply budget templates dialog */}
+      {isTemplateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-[#0B1220]/60 backdrop-blur-sm" onClick={() => setIsTemplateModalOpen(false)}></div>
+          
+          <div className="relative w-full max-w-sm rounded-2xl border border-slate-200 dark:border-slate-800 glass-card bg-white dark:bg-slate-900 p-6 shadow-2xl flex flex-col text-left">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-base font-bold">Apply Budget Template</h3>
+              <button onClick={() => setIsTemplateModalOpen(false)} className="text-slate-400 hover:text-slate-650 dark:hover:text-slate-200">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Template Rule Choice */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-450 mb-1">Budgeting Method</label>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/55 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                >
+                  <option value="50-30-20">50/30/20 Rule (Needs/Wants/Savings)</option>
+                  <option value="70-20-10">70/20/10 Rule (Frugal/Invest-heavy)</option>
+                  <option value="balanced">Balanced Split (Even Distributions)</option>
+                </select>
+              </div>
+
+              {/* Monthly Net Income */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-450 mb-1">Monthly Net Income ({currencySymbol})</label>
+                <input
+                  type="number"
+                  value={templateIncome}
+                  onChange={(e) => setTemplateIncome(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/55 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors"
+                  placeholder="4000"
+                />
+              </div>
+
+              {/* Target Month */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-450 mb-1">Target Month</label>
+                <input
+                  type="month"
+                  value={selectedTemplateMonth}
+                  onChange={(e) => setSelectedTemplateMonth(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white/55 dark:bg-slate-900/60 text-xs outline-none focus:border-indigo-500 transition-colors cursor-pointer"
+                />
+              </div>
+
+              {/* Description box */}
+              <div className="bg-indigo-500/5 dark:bg-indigo-950/20 border border-indigo-500/10 p-3 rounded-xl text-[10px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                {selectedTemplate === '50-30-20' ? (
+                  <span>
+                    <strong>50/30/20 Rule:</strong> Allocates <strong>50%</strong> of income for needs (Housing, Utilities, Groceries, Transport) and <strong>30%</strong> for wants (Dining, Entertainment, Shopping). The remaining 20% represents your savings target.
+                  </span>
+                ) : selectedTemplate === '70-20-10' ? (
+                  <span>
+                    <strong>70/20/10 Rule:</strong> Allocates <strong>70%</strong> for living expenses (Housing, Utilities, Food) and <strong>10%</strong> for discretionary spending, leaving <strong>20%</strong> for savings and goals.
+                  </span>
+                ) : (
+                  <span>
+                    <strong>Balanced split:</strong> Distributes a balanced budget of <strong>80%</strong> of your income evenly across all standard categories, leaving 20% as net savings room.
+                  </span>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <button
+                onClick={applyTemplate}
+                disabled={isApplyingTemplate}
+                className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl text-xs shadow-md shadow-indigo-500/20 transition-all cursor-pointer flex justify-center items-center"
+              >
+                {isApplyingTemplate ? 'Applying...' : 'Apply Template to Month'}
+              </button>
+            </div>
           </div>
         </div>
       )}
