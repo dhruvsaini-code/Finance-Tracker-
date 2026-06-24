@@ -29,10 +29,12 @@ import { transactionService, budgetService, savingsService } from '../services/a
 import GlassCard from '../components/ui/GlassCard';
 import AnimatedCounter from '../components/ui/AnimatedCounter';
 import SkeletonLoader from '../components/ui/SkeletonLoader';
+import { useCurrencyStore } from '../store/currencyStore';
 
 const COLORS = ['#6366F1', '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#EC4899', '#8B5CF6'];
 
 export const Dashboard: React.FC = () => {
+  const { currencySymbol } = useCurrencyStore();
   // Queries
   const { data: stats, isLoading: isStatsLoading } = useQuery({
     queryKey: ['stats'],
@@ -220,8 +222,8 @@ export const Dashboard: React.FC = () => {
                   ></div>
                 </div>
                 <div className="flex justify-between text-[9px] text-slate-400">
-                  <span>${currentSavingsGoal.toLocaleString()} saved</span>
-                  <span>${totalSavingsGoal.toLocaleString()} goal</span>
+                  <span>{currencySymbol}{currentSavingsGoal.toLocaleString()} saved</span>
+                  <span>{currencySymbol}{totalSavingsGoal.toLocaleString()} goal</span>
                 </div>
               </div>
             </GlassCard>
@@ -361,7 +363,7 @@ export const Dashboard: React.FC = () => {
                       borderRadius: '12px',
                       color: '#fff'
                     }} 
-                    formatter={(value) => `$${Number(value).toLocaleString()}`}
+                    formatter={(value) => `${currencySymbol}${Number(value).toLocaleString()}`}
                   />
                   <Legend 
                     layout="horizontal" 
@@ -418,7 +420,7 @@ export const Dashboard: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40">
                   {recentTx.map((tx) => (
                     <tr key={tx._id} className="hover:bg-slate-100/30 dark:hover:bg-slate-800/10">
-                      <td className="py-3 font-semibold">{tx.title}</td>
+                      <td className="py-3 font-semibold">{tx.description}</td>
                       <td className="py-3">
                         <span className="px-2 py-0.5 rounded-full text-[9px] bg-slate-200/50 dark:bg-slate-800 font-medium capitalize text-slate-600 dark:text-slate-300">
                           {tx.category}
@@ -428,7 +430,7 @@ export const Dashboard: React.FC = () => {
                         {new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </td>
                       <td className={`py-3 text-right font-bold ${tx.type === 'income' ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {tx.type === 'income' ? '+' : '-'}${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                        {tx.type === 'income' ? '+' : '-'}{currencySymbol}{tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))}
@@ -468,7 +470,7 @@ export const Dashboard: React.FC = () => {
                     <div className="flex justify-between text-[11px]">
                       <span className="font-semibold capitalize">{b.category}</span>
                       <span className={`font-bold ${isOver ? 'text-rose-500' : 'text-slate-400'}`}>
-                        ${spent.toFixed(0)} / ${b.limitAmount.toFixed(0)}
+                        {currencySymbol}{spent.toFixed(0)} / {currencySymbol}{b.limitAmount.toFixed(0)}
                       </span>
                     </div>
                     <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
