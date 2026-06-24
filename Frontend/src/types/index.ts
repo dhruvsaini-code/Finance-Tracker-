@@ -9,7 +9,7 @@ export type TransactionType = 'income' | 'expense';
 
 export interface Transaction {
   _id: string;
-  title: string;
+  description: string;
   amount: number;
   category: string;
   type: TransactionType;
@@ -49,8 +49,38 @@ export interface DashboardStats {
 }
 
 export interface AIInsights {
+  score: number;
   summary: string;
   savingsRate: string;
+  budgetCompliance: string;
   budgetWarnings: string[];
   recommendations: string[];
+  anomalies?: {
+    id: string;
+    description: string;
+    amount: number;
+    category: string;
+    date: string;
+    average: number;
+    deviationTimes: string;
+  }[];
+  goalPredictions?: {
+    goalId: string;
+    title: string;
+    status: 'Completed' | 'On Track' | 'Delayed' | 'At Risk';
+    projectedMonths: number;
+    projectedDate: string | null;
+    advice: string;
+  }[];
+  forecast?: {
+    projectedIncome: number;
+    projectedExpense: number;
+    projectedNet: number;
+    chartData: {
+      month: string;
+      Income: number;
+      Expenses: number;
+      type: 'historical' | 'forecast';
+    }[];
+  };
 }

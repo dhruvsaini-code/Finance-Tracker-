@@ -42,6 +42,22 @@ export const transactionService = {
   getAIInsights: async () => {
     const res = await apiClient.get<{ success: boolean; insights: AIInsights }>('/transactions/ai-insights');
     return res.data.insights;
+  },
+  getRecurring: async () => {
+    const res = await apiClient.get<{ success: boolean; count: number; data: any[] }>('/transactions/recurring');
+    return res.data.data;
+  },
+  createRecurring: async (data: { amount: number; description: string; category: string; type: string; frequency: string; startDate?: string; tags?: string[]; notes?: string }) => {
+    const res = await apiClient.post<{ success: boolean; data: any }>('/transactions/recurring', data);
+    return res.data.data;
+  },
+  updateRecurring: async (id: string, data: any) => {
+    const res = await apiClient.put<{ success: boolean; data: any }>(`/transactions/recurring/${id}`, data);
+    return res.data.data;
+  },
+  deleteRecurring: async (id: string) => {
+    const res = await apiClient.delete<{ success: boolean; data: {} }>(`/transactions/recurring/${id}`);
+    return res.data;
   }
 };
 

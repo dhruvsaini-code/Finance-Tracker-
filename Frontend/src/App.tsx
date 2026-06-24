@@ -70,14 +70,18 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   }
 }
 
+import { useThemeStore } from './store/themeStore';
+
 export const App: React.FC = () => {
   const initializeAuth = useAuthStore((state) => state.initialize);
+  const initializeTheme = useThemeStore((state) => state.initializeTheme);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
-  // Initialize auth credentials from storage
+  // Initialize auth credentials and theme from storage
   useEffect(() => {
     initializeAuth();
-  }, [initializeAuth]);
+    initializeTheme();
+  }, [initializeAuth, initializeTheme]);
 
   // Command palette hotkey handler (Ctrl+K or Cmd+K)
   useEffect(() => {
