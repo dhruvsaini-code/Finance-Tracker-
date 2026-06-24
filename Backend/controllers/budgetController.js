@@ -1,4 +1,5 @@
 const budgetService = require('../services/budgetService');
+const { logAudit } = require('../services/auditService');
 
 // @desc    Get user budgets for a specific month
 // @route   GET /api/budgets
@@ -23,6 +24,15 @@ exports.getBudgets = async (req, res, next) => {
 exports.upsertBudget = async (req, res, next) => {
   try {
     const budget = await budgetService.upsertBudget(req.user._id, req.body);
+    
+    // Log audit
+    await logAudit(req, 'BUDGET_UPSERT', {
+      budgetId: budget._id,
+      category: budget.category,
+      limitAmount: budget.limitAmount,
+      month: budget.month
+    });
+
     res.status(201).json({
       success: true,
       data: budget
@@ -38,6 +48,10 @@ exports.upsertBudget = async (req, res, next) => {
 exports.deleteBudget = async (req, res, next) => {
   try {
     await budgetService.deleteBudget(req.user._id, req.params.id);
+    
+    // Log audit
+    await logAudit(req, 'BUDGET_DELETE', { budgetId: req.params.id });
+
     res.json({
       success: true,
       data: {}
