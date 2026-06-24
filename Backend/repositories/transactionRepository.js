@@ -1,4 +1,5 @@
 const Transaction = require('../models/Transaction');
+const mongoose = require('mongoose');
 
 class TransactionRepository {
   async find(filter, sort = { date: -1 }) {
@@ -23,6 +24,45 @@ class TransactionRepository {
   async delete(id) {
     return await Transaction.findByIdAndDelete(id);
   }
+
+  async getStats(userId) {
+    return await Transaction.aggregate([
+      { $match: { user: new mongoose.Types.ObjectId(userId) } },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: '$type',
+                total: { $sum: '$amount' }
+              }
+            }
+          ],
+          categoryBreakdown: [
+            { $match: { type: 'expense' } },
+            {
+              $group: {
+                _id: '$category',
+                total: { $sum: '$amount' }
+              }
+            }
+          ],
+          monthlyTrends: [
+            {
+              $group: {
+                _id: {
+                  month: { $dateToString: { format: '%Y-%m', date: '$date' } },
+                  type: '$type'
+                },
+                total: { $sum: '$amount' }
+              }
+            }
+          ]
+        }
+      }
+    ]);
+  }
 }
 
 module.exports = new TransactionRepository();
+

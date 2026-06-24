@@ -76,37 +76,43 @@ class TransactionService {
   }
 
   async getStats(userId) {
-    const transactions = await transactionRepository.find({ user: userId });
+    const statsResult = await transactionRepository.getStats(userId);
+    const raw = statsResult[0] || {};
 
     let totalIncome = 0;
     let totalExpenses = 0;
+
+    if (raw.totals) {
+      raw.totals.forEach(t => {
+        if (t._id === 'income') totalIncome = t.total;
+        if (t._id === 'expense') totalExpenses = t.total;
+      });
+    }
+
     const categoryBreakdown = {};
+    if (raw.categoryBreakdown) {
+      raw.categoryBreakdown.forEach(c => {
+        categoryBreakdown[c._id] = c.total;
+      });
+    }
+
     const monthlyTrends = {};
-
-    transactions.forEach(tx => {
-      const amt = tx.amount;
-      const dateObj = new Date(tx.date);
-      const monthStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-
-      // Initialize monthly trends tracker
-      if (!monthlyTrends[monthStr]) {
-        monthlyTrends[monthStr] = { income: 0, expense: 0 };
-      }
-
-      if (tx.type === 'income') {
-        totalIncome += amt;
-        monthlyTrends[monthStr].income += amt;
-      } else {
-        totalExpenses += amt;
-        monthlyTrends[monthStr].expense += amt;
-        
-        // Category breakdown for expenses
-        if (!categoryBreakdown[tx.category]) {
-          categoryBreakdown[tx.category] = 0;
+    if (raw.monthlyTrends) {
+      raw.monthlyTrends.forEach(m => {
+        if (m._id && m._id.month) {
+          const month = m._id.month;
+          const type = m._id.type;
+          if (!monthlyTrends[month]) {
+            monthlyTrends[month] = { income: 0, expense: 0 };
+          }
+          if (type === 'income') {
+            monthlyTrends[month].income = m.total;
+          } else if (type === 'expense') {
+            monthlyTrends[month].expense = m.total;
+          }
         }
-        categoryBreakdown[tx.category] += amt;
-      }
-    });
+      });
+    }
 
     return {
       balance: totalIncome - totalExpenses,
