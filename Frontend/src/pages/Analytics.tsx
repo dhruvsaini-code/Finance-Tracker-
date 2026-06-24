@@ -8,7 +8,9 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer, 
-  Legend 
+  Legend,
+  LineChart,
+  Line
 } from 'recharts';
 import { TrendingUp, Sparkles, HelpCircle, Activity } from 'lucide-react';
 import { transactionService } from '../services/apiService';
@@ -28,13 +30,20 @@ export const Analytics: React.FC = () => {
   });
 
   // 1. Prepare Trends Chart Data
+  let cumulative = 0;
   const barChartData = stats?.monthlyTrends
-    ? Object.keys(stats.monthlyTrends).sort().map(month => ({
-        month,
-        Income: stats.monthlyTrends[month].income,
-        Expenses: stats.monthlyTrends[month].expense,
-        Net: stats.monthlyTrends[month].income - stats.monthlyTrends[month].expense
-      }))
+    ? Object.keys(stats.monthlyTrends).sort().map(month => {
+        const inc = stats.monthlyTrends[month].income;
+        const exp = stats.monthlyTrends[month].expense;
+        cumulative += (inc - exp);
+        return {
+          month,
+          Income: inc,
+          Expenses: exp,
+          Net: inc - exp,
+          "Net Worth": cumulative
+        };
+      })
     : [];
 
   // 2. Extrapolate Next Month Forecast
@@ -183,6 +192,45 @@ export const Analytics: React.FC = () => {
         </GlassCard>
 
       </div>
+
+      {/* Net Worth Growth Line Chart */}
+      <GlassCard className="h-[350px] flex flex-col">
+        <div className="mb-4 text-left">
+          <h2 className="text-sm font-bold flex items-center space-x-1.5">
+            <TrendingUp size={16} className="text-indigo-500" />
+            <span>Net Worth Progression Curve</span>
+          </h2>
+          <p className="text-[10px] text-slate-400 mt-0.5">Cumulative balance trajectory tracking aggregated income surplus minus expenses.</p>
+        </div>
+        <div className="flex-1 w-full text-xs">
+          {isLoading ? (
+            <SkeletonLoader variant="card" className="h-full" />
+          ) : barChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" className="hidden dark:block" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:hidden" />
+                <XAxis dataKey="month" stroke="#94a3b8" />
+                <YAxis stroke="#94a3b8" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'rgba(17, 24, 39, 0.9)', 
+                    borderColor: '#1e293b', 
+                    borderRadius: '12px',
+                    color: '#fff'
+                  }} 
+                />
+                <Legend />
+                <Line type="monotone" name="Net Worth ($)" dataKey="Net Worth" stroke="#6366F1" strokeWidth={3} dot={{ stroke: '#6366F1', strokeWidth: 2, r: 4 }} activeDot={{ r: 8 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-slate-400">
+              No cumulative trends data available yet.
+            </div>
+          )}
+        </div>
+      </GlassCard>
 
       {/* Weekday Spending Heatmap Density board */}
       <GlassCard className="space-y-6">
