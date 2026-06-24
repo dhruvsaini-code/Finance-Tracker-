@@ -1,66 +1,101 @@
 # FinanceSaaS - AI-Powered Full-Stack Wealth & Finance Tracker
 
-FinanceSaaS is a production-grade, AI-powered fintech SaaS application designed for personal asset tracking. Built with **React 18, Vite, TypeScript, Node.js, Express, and MongoDB**, it features a gorgeous dark-theme glassmorphism dashboard, JWT refresh token rotation cookies, interactive charts, automated AI transaction categorization, spending heatmaps, and financial forecasting engines.
-
-## Key Features
-
-- **JWT Auth with Cookie-Based Rotation**: Implements secure access tokens (15m expiration) alongside HTTP-only, SameSite=Strict refresh tokens (7d expiration) in the backend to ensure high security against XSS.
-- **AI-Powered Transaction Categorization**: Utilizes OpenAI API (with a seamless fallback to a local rule-based category mapper) to dynamically categorize user transactions (e.g., "Starbucks Coffee" is tagged as "Dining Out").
-- **Interactive Recharts Visualizations**: Displays area trends, budget progress bars, category breakdown distributions, and weekday spending intensity heatmaps.
-- **Financial Wellness Score (0-100)**: Evaluates saving speed, budget compliance rates, and savings goals completions to score user wellness.
-- **Linear Predictive Analytics**: Projects next month's income, expenses, and cash flow trends based on previous history.
-- **CSV Exporter**: Allows downloading the transaction history as clean Excel-compatible CSVs.
-- **Command Palette (`Ctrl + K`)**: Instantly search pages, trigger theme switches, or log out of the session.
-- **Enterprise Clean Architecture**: Structured utilizing separation of concerns (Repositories, Validators, Services, Controllers, and AI wrappers).
-- **Containerized Development**: Equipped with Nginx, multi-stage Dockerfiles, and Docker Compose configurations.
+FinanceSaaS is a production-grade, enterprise-scale AI-powered fintech application designed for personal asset tracking and analytics. Built with **React 18, Vite, TypeScript, Node.js, Express, and MongoDB**, it features a beautiful glassmorphism dark-theme dashboard, JWT refresh token rotation cookies, interactive charts, automated AI transaction categorization, spending heatmaps, savings goal target timelines, and financial forecasting engines.
 
 ---
 
-## Codebase Architecture
+## 🏗️ System Architecture & Data Flow
 
-```
-Finance-Tracker-System/
-├── Backend/
-│   ├── ai/                 # OpenAI integrations & rule fallbacks
-│   ├── config/             # Mongoose connection triggers
-│   ├── controllers/        # Express request routing controllers
-│   ├── middleware/         # Auth protect, rate limiting, and errors handlers
-│   ├── models/             # Mongoose schema definitions
-│   ├── repositories/       # Isolated database queries mapping
-│   ├── routes/             # API routing mappings
-│   ├── services/           # Business logic flow coordinates
-│   ├── validators/         # Input request validation guards
-│   ├── app.js              # Express app initializer
-│   ├── seed.js             # Database dummy seed script
-│   └── package.json
-│
-├── Frontend/
-│   ├── src/
-│   │   ├── api/            # Axios instance with auth interceptors
-│   │   ├── components/     # Layout wraps, GlassCard, command palettes
-│   │   ├── pages/          # Dashboard, Transactions, Budgets, Savings, AI, Analytics
-│   │   ├── store/          # Zustand global auth and theme stores
-│   │   ├── services/       # React Query API fetch wrappers
-│   │   ├── types/          # TypeScript interfaces
-│   │   ├── App.tsx         # Route paths mappings
-│   │   └── main.tsx
-│   ├── index.html          # HTML entry
-│   └── package.json
-│
-├── docker-compose.yml      # Docker multi-service runner
-└── database_schema.sql     # Reference SQL design schema
+```mermaid
+graph TD
+    Client[Client Browser / Axios] -->|Secure HTTPS Request| Nginx{Nginx Reverse Proxy}
+    Nginx -->|Static Assets| Frontend[Frontend React Server]
+    Nginx -->|API Route /api| Express[Express Server / Node.js]
+    Express -->|Track ID & Winston Logs| Logger[Winston logger]
+    Express -->|NoSQL Injection / MongoSanitize| Security[Security Layer]
+    Express -->|Zod Schema Validation| Validation[Zod Request Validator]
+    Express -->|Token Authentication / RBAC| AuthGuard[Auth Middleware]
+    AuthGuard -->|Controllers & DTOs| Controllers[Express Controllers]
+    Controllers -->|Business Logic Coordination| Services[Service Layer]
+    Services -->|Background Task Scheduler| CronJob[Cron Scheduler]
+    Services -->|Queries & Indexes| Repository[Repository Pattern]
+    Repository -->|Aggregations| MongoDB[(MongoDB Database)]
+    Services -->|AI Predictions Fallback| OpenAI[OpenAI API / Rules Engine]
 ```
 
 ---
 
-## Local Getting Started Guide
+## 🌟 Advanced Features
+
+### 🔐 High-Fidelity Security & Auth
+*   **JWT Auth with Cookie-Based Rotation:** Implements secure short-lived access tokens (15m expiration) alongside HTTP-only, SameSite=Strict refresh tokens (7d expiration) in the backend to ensure high security against XSS.
+*   **Token Rotation & Reuse Detection:** Prevents session hijacking. If a refresh token is reused, all refresh tokens associated with that user's family are immediately invalidated.
+*   **Strict Zod Validation & Request Sanitation:** Enforces type safety at runtime. Prevents parameters injection via custom Zod schemas.
+*   **NoSQL Injection & XSS Defense:** Uses `express-mongo-sanitize` and `helmet` headers to secure database queries against malicious payloads.
+
+### 📊 Advanced Aggregations & DB Performance
+*   **MongoDB Aggregation Pipelines:** Replaces slow Node.js loop aggregations. Generates statistics, category breakdowns, and monthly trends directly in the MongoDB layer using a single `$facet` pipeline, significantly boosting read speeds.
+*   **Optimized Database Indexes:** Implements compound indexing (`{ user: 1, date: -1 }`, `{ user: 1, category: 1 }`) to ensure fast table scans for scalable ledgers.
+
+### 🤖 AI Insight Analytics
+*   **Mock AI Analytics Engine (Recruiter Mode):** When no `OPENAI_API_KEY` is present, a local rules-based engine triggers realistic statistical anomalies, budget overruns, and milestone projections, removing setup friction.
+*   **Goal Achievement Predictor:** Computes specific dates savings goals will be completed based on the user's monthly net surplus speed.
+*   **Strategic Spending Anomalies:** Flags expenses that deviate by more than 2 standard deviations from the category's typical historical average.
+
+### 💼 Portfolio & SaaS Core Operations
+*   **CSV Bulk Imports:** Supports bulk transaction creation by uploading CSV spreadsheets processed and mapped client-side.
+*   **Client-Side PDF Exporter:** Generates print-ready financial statements using clean HTML and styling formats.
+*   **Multi-Currency Support:** Dynamically switches settings between USD ($), EUR (€), GBP (£), and INR (₹), updating the client state instantly.
+*   **Recurring Transactions Scheduler:** Registers repeating bills or paychecks (daily, weekly, monthly, yearly) and copies them into standard logs using a background worker.
+
+---
+
+## 🗄️ Database Schemas
+
+### 1. `Transaction`
+```typescript
+{
+  user: mongoose.Schema.Types.ObjectId, // ref: 'User'
+  amount: Number,
+  category: String,
+  description: String,
+  type: 'income' | 'expense',
+  date: Date,
+  tags: [String],
+  notes: String,
+  createdAt: Date
+}
+```
+
+### 2. `RecurringTransaction`
+```typescript
+{
+  user: mongoose.Schema.Types.ObjectId, // ref: 'User'
+  amount: Number,
+  category: String,
+  description: String,
+  type: 'income' | 'expense',
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly',
+  startDate: Date,
+  lastTriggered: Date,
+  nextOccurrence: Date,
+  tags: [String],
+  notes: String,
+  isActive: Boolean,
+  createdAt: Date
+}
+```
+
+---
+
+## 🚀 Getting Started Locally
 
 ### Prerequisites
-- Node.js (v18+)
-- MongoDB running locally (or MongoDB Atlas URI)
+*   Node.js (v18+)
+*   MongoDB running locally (or MongoDB Atlas URI)
 
-### 1. Database Seeding & Environment Setup
-Create a file at `env/.env` and insert your configurations:
+### 1. Environment Configurations
+Create a file at `env/.env` and insert your credentials:
 ```env
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/finance_tracker
@@ -70,55 +105,104 @@ NODE_ENV=development
 # Optional: OPENAI_API_KEY=your_openai_api_key
 ```
 
-Seed the database with mock user (`demo@example.com` / `password123`) and initial transactions:
+### 2. Seed & Initialize Database
+Install dependencies and run the seed script to create a demo account:
 ```bash
 cd Backend
 npm install
 node seed.js
 ```
+*   **Demo Username:** `demo@example.com`
+*   **Password:** `password123`
 
-### 2. Start the Backend API Server
+### 3. Launch Development Servers
+**Backend:**
 ```bash
+cd Backend
 npm run dev
-# Server boots on port 5000
+# API listens on http://localhost:5000. Interactive Swagger UI is available at http://localhost:5000/api-docs
 ```
 
-### 3. Start the Frontend React Client
+**Frontend:**
 ```bash
-cd ../Frontend
+cd Frontend
 npm install
 npm run dev
-# React Vite server boots on http://localhost:5173
+# Client runs on http://localhost:5173
 ```
-Log in using:
-- **Email**: `demo@example.com`
-- **Password**: `password123`
 
 ---
 
-## Running inside Docker Containers
+## 🐳 Docker Deployment (Nginx Reverse Proxy)
 
-Ensure Docker is running, then launch the full-stack system:
+Launch the full-stack system locally using the multi-stage Docker configurations:
 ```bash
 docker-compose up --build
 ```
-- Frontend client is accessible on: `http://localhost`
-- Backend API server operates on: `http://localhost:5000`
-- MongoDB operates on port: `27017`
+*   **Frontend Web App:** `http://localhost` (served by Nginx routing `/api` requests to Express on port 5000)
+*   **MongoDB port:** `27017`
 
 ---
 
-## CI/CD Pipeline
-GitHub Actions automatically runs compile verification, type checks (`tsc --noEmit`), and builds production client assets on push to `main` or `master` branches (configured under `.github/workflows/ci.yml`).
+## ☁️ Production Deployment Guide
 
-## Upcoming Features
+### Option A: VPS Hosting (Ubuntu, Nginx, Systemd)
+1.  **Clone & Build Assets:**
+    ```bash
+    git clone https://github.com/your-username/finance-tracker.git /var/www/finance-tracker
+    cd /var/www/finance-tracker/Frontend
+    npm install && npm run build
+    ```
+2.  **Setup PM2 to Keep Backend Alive:**
+    ```bash
+    npm install -g pm2
+    cd ../Backend
+    npm install
+    pm2 start app.js --name "finance-backend"
+    pm2 save && pm2 startup
+    ```
+3.  **Configure Nginx Reverse Proxy (`/etc/nginx/sites-available/default`):**
+    ```nginx
+    server {
+        listen 80;
+        server_name yourdomain.com;
 
-- AI spending insights
+        # Frontend assets
+        location / {
+            root /var/www/finance-tracker/Frontend/dist;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
 
-- Budget forecasting
-- Savings goal recommendations
-- Expense categorization AI
-Email attribution test
-Update 1
-June 16 contribution
-// update 3
+        # Backend api proxy
+        location /api {
+            proxy_pass http://localhost:5000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
+    ```
+4.  **Restart Nginx:** `sudo systemctl restart nginx`
+
+### Option B: AWS ECS Deployment (Fargate + Atlas)
+1.  Set up a MongoDB Atlas cluster and acquire the connection URI.
+2.  Create an AWS ECR (Elastic Container Registry) repository.
+3.  Build and push Docker containers to AWS ECR.
+4.  Launch an ECS Task Definition under **Fargate**, specifying container ports:
+    *   `Frontend`: Port `80` (expose to Load Balancer)
+    *   `Backend`: Port `5000` (internal network routing)
+5.  Set environment credentials in ECS task variables (`MONGO_URI`, `JWT_SECRET`, `NODE_ENV=production`).
+
+---
+
+## 🧪 Testing
+
+The backend includes test coverage for controllers and API routing:
+```bash
+cd Backend
+npm test
+```
+*(Tests are executed using Jest and Supertest, stubbing database and AI services to run cleanly in CI/CD workflows).*
