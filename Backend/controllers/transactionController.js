@@ -1,4 +1,5 @@
 const transactionService = require('../services/transactionService');
+const { logAudit } = require('../services/auditService');
 
 // @desc    Get all transactions for current user
 // @route   GET /api/transactions
@@ -22,6 +23,15 @@ exports.getTransactions = async (req, res, next) => {
 exports.createTransaction = async (req, res, next) => {
   try {
     const transaction = await transactionService.create(req.user._id, req.body);
+    
+    // Log audit
+    await logAudit(req, 'TRANSACTION_CREATE', {
+      transactionId: transaction._id,
+      amount: transaction.amount,
+      type: transaction.type,
+      category: transaction.category
+    });
+
     res.status(201).json({
       success: true,
       data: transaction
@@ -37,6 +47,15 @@ exports.createTransaction = async (req, res, next) => {
 exports.updateTransaction = async (req, res, next) => {
   try {
     const transaction = await transactionService.update(req.user._id, req.params.id, req.body);
+    
+    // Log audit
+    await logAudit(req, 'TRANSACTION_UPDATE', {
+      transactionId: transaction._id,
+      amount: transaction.amount,
+      type: transaction.type,
+      category: transaction.category
+    });
+
     res.json({
       success: true,
       data: transaction
@@ -52,6 +71,10 @@ exports.updateTransaction = async (req, res, next) => {
 exports.deleteTransaction = async (req, res, next) => {
   try {
     await transactionService.delete(req.user._id, req.params.id);
+    
+    // Log audit
+    await logAudit(req, 'TRANSACTION_DELETE', { transactionId: req.params.id });
+
     res.json({
       success: true,
       data: {}
